@@ -64,6 +64,31 @@ describe("Block", () => {
     });
   });
 
+  describe("blockHash()", () => {
+    it("tính hash từ timestamp, lastHash và data của block", () => {
+      const block = new Block(123, "last-hash", "hash", "data");
+
+      expect(Block.blockHash(block)).toBe(
+        Block.hash(123, "last-hash", "data"),
+      );
+    });
+
+    it("không phụ thuộc vào hash đang lưu trong block", () => {
+      const block = new Block(123, "last-hash", "fake-hash", "data");
+
+      expect(Block.blockHash(block)).not.toBe("fake-hash");
+      expect(Block.blockHash(block)).toBe(
+        Block.blockHash(new Block(123, "last-hash", "other-hash", "data")),
+      );
+    });
+
+    it("khớp với hash của block vừa mine", () => {
+      const block = Block.mineBlock(Block.genesis(), "foo-data");
+
+      expect(Block.blockHash(block)).toBe(block.hash);
+    });
+  });
+
   describe("mineBlock()", () => {
     const NOW = 1700000000000;
     const data = "foo-data";

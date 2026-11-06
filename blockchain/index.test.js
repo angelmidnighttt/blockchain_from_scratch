@@ -1,5 +1,5 @@
 const Block = require("./block");
-const Blockchain = require("./blockchain");
+const Blockchain = require(".");
 
 describe("Blockchain", () => {
   let blockchain;
@@ -186,6 +186,105 @@ describe("Blockchain", () => {
         blockchain.chain.splice(2, 1);
 
         expect(validator.isValidChain(blockchain.chain)).toBe(false);
+      });
+    });
+  });
+
+  describe("replaceChain()", () => {
+    let current;
+
+    // Tạo chain hợp lệ gồm genesis và `count` block, khác nội dung với chain
+    // hiện tại để phân biệt được chain nào đang được giữ lại.
+    const buildChain = (count) => {
+      const other = new Blockchain();
+
+      for (let i = 0; i < count; i++) {
+        other.addBlock(`incoming-${i}`);
+      }
+
+      return other.chain;
+    };
+
+    beforeEach(() => {
+      jest.spyOn(console, "log").mockImplementation(() => {});
+
+      blockchain.addBlock("first");
+      blockchain.addBlock("second");
+      current = [...blockchain.chain];
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    describe("chain mới dài hơn và hợp lệ", () => {
+      let newChain;
+
+      beforeEach(() => {
+        newChain = buildChain(3);
+      });
+
+      it("thay thế chain hiện tại", () => {
+        blockchain.replaceChain(newChain);
+
+        expect(blockchain.chain).toEqual(newChain);
+      });
+
+      it("ghi log đã thay thế", () => {
+        blockchain.replaceChain(newChain);
+
+        expect(console.log).toHaveBeenCalledWith(
+          "Replacing blockchain with the new chain.",
+        );
+      });
+
+      it("nhận được chain đã qua JSON, như khi gửi từ peer khác", () => {
+        const received = JSON.parse(JSON.stringify(newChain));
+
+        blockchain.replaceChain(received);
+
+        expect(blockchain.chain).toEqual(received);
+      });
+
+      it("vẫn thêm được block hợp lệ sau khi thay thế", () => {
+        blockchain.replaceChain(newChain);
+
+        const block = blockchain.addBlock("after-replace");
+
+        expect(block.lastHash).toBe(newChain[3].hash);
+        expect(blockchain.chain).toHaveLength(5);
+        expect(blockchain.isValidChain(blockchain.chain)).toBe(true);
+      });
+    });
+
+    describe("chain mới không dài hơn", () => {
+      it.each([
+        ["ngắn hơn", 1],
+        ["dài bằng", 2],
+      ])("chain %s thì giữ nguyên chain hiện tại", (_label, count) => {
+        blockchain.replaceChain(buildChain(count));
+
+        expect(blockchain.chain).toEqual(current);
+        expect(console.log).toHaveBeenCalledWith(
+          "Received chain is not longer than the current chain.",
+        );
+      });
+    });
+
+    describe("chain mới dài hơn nhưng không hợp lệ", () => {
+      it.each([
+        ["genesis bị sửa", 0],
+        ["block bị sửa", 2],
+      ])("%s thì giữ nguyên chain hiện tại", (_label, index) => {
+        const newChain = buildChain(3);
+        newChain[index].data = ["fake-data"];
+
+        blockchain.replaceChain(newChain);
+
+        expect(blockchain.chain).toEqual(current);
+        expect(console.log).toHaveBeenCalledWith(
+          "The received chain is not valid.",
+        );
       });
     });
   });
