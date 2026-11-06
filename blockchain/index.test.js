@@ -224,9 +224,10 @@ describe("Blockchain", () => {
         newChain = buildChain(3);
       });
 
-      it("thay thế chain hiện tại", () => {
-        blockchain.replaceChain(newChain);
+      it("thay thế chain hiện tại và trả về true", () => {
+        const replaced = blockchain.replaceChain(newChain);
 
+        expect(replaced).toBe(true);
         expect(blockchain.chain).toEqual(newChain);
       });
 
@@ -262,8 +263,9 @@ describe("Blockchain", () => {
         ["ngắn hơn", 1],
         ["dài bằng", 2],
       ])("chain %s thì giữ nguyên chain hiện tại", (_label, count) => {
-        blockchain.replaceChain(buildChain(count));
+        const replaced = blockchain.replaceChain(buildChain(count));
 
+        expect(replaced).toBe(false);
         expect(blockchain.chain).toEqual(current);
         expect(console.log).toHaveBeenCalledWith(
           "Received chain is not longer than the current chain.",
@@ -279,8 +281,9 @@ describe("Blockchain", () => {
         const newChain = buildChain(3);
         newChain[index].data = ["fake-data"];
 
-        blockchain.replaceChain(newChain);
+        const replaced = blockchain.replaceChain(newChain);
 
+        expect(replaced).toBe(false);
         expect(blockchain.chain).toEqual(current);
         expect(console.log).toHaveBeenCalledWith(
           "The received chain is not valid.",
